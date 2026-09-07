@@ -8,24 +8,25 @@ A practical AWS and DevOps course for beginners and intermediate learners. You w
 
 - [How to Use This Guide](#how-to-use-this-guide)
 - [The Running Project](#the-running-project)
-- [Stage 1 - AWS Basics](#stage-1---aws-basics)
-- [Stage 2 - My First EC2 Web Server](#stage-2---my-first-ec2-web-server)
-- [Stage 3 - Storage and Networking](#stage-3---storage-and-networking)
-- [Stage 4 - IAM and Secure Access](#stage-4---iam-and-secure-access)
-- [Stage 5 - RDS Database](#stage-5---rds-database)
-- [Stage 6 - ALB and Multiple EC2 Instances](#stage-6---alb-and-multiple-ec2-instances)
-- [Stage 7 - Auto Scaling and Failure Recovery](#stage-7---auto-scaling-and-failure-recovery)
-- [Stage 8 - CloudFront and Route 53](#stage-8---cloudfront-and-route-53)
-- [Stage 9 - Monitoring and Audit](#stage-9---monitoring-and-audit)
-- [Stage 10 - CloudFormation and Terraform](#stage-10---cloudformation-and-terraform)
-- [Stage 11 - Cross-Service Scenarios](#stage-11---cross-service-scenarios)
+- [Stage 1 - AWS Basics](#stage-1-aws-basics)
+- [Stage 2 - My First EC2 Web Server](#stage-2-my-first-ec2-web-server)
+- [Stage 3 - Storage and Networking](#stage-3-storage-and-networking)
+- [Stage 4 - IAM and Secure Access](#stage-4-iam-and-secure-access)
+- [Stage 5 - RDS Database](#stage-5-rds-database)
+- [Stage 6 - ALB and Multiple EC2 Instances](#stage-6-alb-and-multiple-ec2-instances)
+- [Stage 7 - Auto Scaling and Failure Recovery](#stage-7-auto-scaling-and-failure-recovery)
+- [Stage 8 - CloudFront and Route 53](#stage-8-cloudfront-and-route-53)
+- [Stage 9 - Monitoring and Audit](#stage-9-monitoring-and-audit)
+- [Stage 10 - CloudFormation and Terraform](#stage-10-cloudformation-and-terraform)
+- [Stage 11 - Cross-Service Scenarios](#stage-11-cross-service-scenarios)
 - [Production Thinking](#production-thinking)
 - [Troubleshooting Reference](#troubleshooting-reference)
 - [Lab Index and Cleanup](#lab-index-and-cleanup)
 - [CLI Quick Reference](#cli-quick-reference)
 - [Interview Preparation](#interview-preparation)
 
-## How to Use This Guide
+<a id="how-to-use-this-guide"></a>
+## 📚 How to Use This Guide
 
 [Main menu](#table-of-contents)
 
@@ -60,7 +61,10 @@ Scenario and checkpoint
 
 Never put real passwords, access keys, secret keys, private keys, tokens, account IDs, public IPs, endpoints, or resource IDs in this document. Use `<AWS_REGION>`, `<AMI_ID>`, `<INSTANCE_ID>`, `<VPC_ID>`, `<SUBNET_ID>`, `<SECURITY_GROUP_ID>`, `<RDS_ENDPOINT>`, and `<BUCKET_NAME>`.
 
-## The Running Project
+---
+
+<a id="the-running-project"></a>
+## 🏗️ The Running Project
 
 [Main menu](#table-of-contents)
 
@@ -94,7 +98,10 @@ RDS database and S3 objects
 
 Do not study the final architecture first. Earn each component by encountering the problem it solves.
 
-## Stage 1 - AWS Basics
+---
+
+<a id="stage-1-aws-basics"></a>
+## 🚀 Stage 1 — AWS Basics
 
 [Main menu](#table-of-contents)
 
@@ -153,7 +160,10 @@ Create a billing alert before labs. EC2, EBS, public IPv4 addresses, NAT Gateway
 
 **Common wrong answer:** Immediately create another instance.
 
-## Stage 2 - My First EC2 Web Server
+---
+
+<a id="stage-2-my-first-ec2-web-server"></a>
+## 🖥️ Stage 2 — My First EC2 Web Server
 
 [Main menu](#table-of-contents)
 
@@ -291,7 +301,10 @@ You should be able to launch EC2, connect to Linux, install Nginx, explain port 
 
 **Answer:** The source CIDR in the security group, local firewall, NACL, route, correct public address, and whether the second source is allowed.
 
-## Stage 3 - Storage and Networking
+---
+
+<a id="stage-3-storage-and-networking"></a>
+## 💾 Stage 3 — Storage and Networking
 
 [Main menu](#table-of-contents)
 
@@ -448,7 +461,10 @@ You should be able to choose EBS, EFS, or S3 by access pattern; upload and retri
 
 **Answer:** Whether both mount the same EFS filesystem, mount-target availability, NFS SG rule, DNS, routes, and POSIX permissions.
 
-## Stage 4 - IAM and Secure Access
+---
+
+<a id="stage-4-iam-and-secure-access"></a>
+## 🔐 Stage 4 — IAM and Secure Access
 
 [Main menu](#table-of-contents)
 
@@ -523,7 +539,10 @@ You should be able to explain authentication versus authorization, trust versus 
 
 **Answer:** Check resource policies, permission boundaries, SCPs, session policies, KMS policies, and explicit denies.
 
-## Stage 5 - RDS Database
+---
+
+<a id="stage-5-rds-database"></a>
+## 🗄️ Stage 5 — RDS Database
 
 [Main menu](#table-of-contents)
 
@@ -585,7 +604,10 @@ You should be able to explain why RDS is private, connect from EC2, create/query
 
 **Answer:** Multi-AZ for failover and, if reads are the bottleneck, read replicas. They solve different problems.
 
-## Stage 6 - ALB and Multiple EC2 Instances
+---
+
+<a id="stage-6-alb-and-multiple-ec2-instances"></a>
+## ⚖️ Stage 6 — ALB and Multiple EC2 Instances
 
 [Main menu](#table-of-contents)
 
@@ -641,7 +663,10 @@ You should be able to explain listener, target group, health check, ALB, public 
 
 **Answer:** To continue serving during an AZ or instance failure and distribute capacity.
 
-## Stage 7 - Auto Scaling and Failure Recovery
+---
+
+<a id="stage-7-auto-scaling-and-failure-recovery"></a>
+## 📈 Stage 7 — Auto Scaling and Failure Recovery
 
 [Main menu](#table-of-contents)
 
@@ -696,7 +721,10 @@ Delete the ASG, launch template versions, ALB, target group, test instances, unu
 
 **Answer:** To bound cost and prevent uncontrolled capacity growth while still allowing horizontal scaling.
 
-## Stage 8 - CloudFront and Route 53
+---
+
+<a id="stage-8-cloudfront-and-route-53"></a>
+## 🌐 Stage 8 — CloudFront and Route 53
 
 [Main menu](#table-of-contents)
 
@@ -750,7 +778,10 @@ Request the origin and CloudFront URL. Compare response headers and latency. The
 
 **Answer:** TTL and resolver caching; also verify authoritative records and application readiness.
 
-## Stage 9 - Monitoring and Audit
+---
+
+<a id="stage-9-monitoring-and-audit"></a>
+## 📊 Stage 9 — Monitoring and Audit
 
 [Main menu](#table-of-contents)
 
@@ -801,7 +832,10 @@ Route one selected AWS or application event to a non-destructive target. **Predi
 
 **Answer:** Use CloudTrail event history or the trail log to inspect identity, source, timestamp, Region, and API request.
 
-## Stage 10 - CloudFormation and Terraform
+---
+
+<a id="stage-10-cloudformation-and-terraform"></a>
+## 🧱 Stage 10 — CloudFormation and Terraform
 
 [Main menu](#table-of-contents)
 
@@ -918,7 +952,10 @@ Review plans, protect state, keep secrets out of configuration, and treat `terra
 
 **Answer:** Stop, inspect configuration/state/provider changes, refresh carefully, review the plan, and do not apply until the cause is understood.
 
-## Stage 11 - Cross-Service Scenarios
+---
+
+<a id="stage-11-cross-service-scenarios"></a>
+## 🧩 Stage 11 — Cross-Service Scenarios
 
 [Main menu](#table-of-contents)
 
@@ -969,7 +1006,10 @@ Review the change set, replacement behavior, dependencies, deletion policies, do
 
 Stop and inspect state, configuration, provider, imports, variables, and plan details. Do not run apply or destroy until the reason is understood.
 
-## Production Thinking
+---
+
+<a id="production-thinking"></a>
+## 🧠 Production Thinking
 
 [Main menu](#table-of-contents)
 
@@ -1014,7 +1054,10 @@ Backups do not automatically satisfy RTO. Test restore duration, dependencies, D
 - [ ] Reviewed IaC plans/change sets and drift detection.
 - [ ] Budgets, tags, and cleanup ownership.
 
-## Troubleshooting Reference
+---
+
+<a id="troubleshooting-reference"></a>
+## 🛠️ Troubleshooting Reference
 
 [Main menu](#table-of-contents)
 
@@ -1075,7 +1118,10 @@ sudo systemctl reload nginx
 
 Restore the file and validate before reloading. Changing Nginx from port 80 to 8080 also requires matching security-group and target configuration.
 
-## Lab Index and Cleanup
+---
+
+<a id="lab-index-and-cleanup"></a>
+## 🧪 Lab Index and Cleanup
 
 [Main menu](#table-of-contents)
 
@@ -1093,7 +1139,10 @@ Before every lab:
 
 **Cleanup targets:** EC2, EBS, Elastic IP/public IPv4, NAT Gateway, ALB/NLB, target groups, RDS, EFS mount targets/filesystems, S3 objects and versions, CloudWatch alarms, CloudTrail data destinations, WAF distributions, and CloudFormation/Terraform-managed resources.
 
-## CLI Quick Reference
+---
+
+<a id="cli-quick-reference"></a>
+## 💻 CLI Quick Reference
 
 [Main menu](#table-of-contents)
 
@@ -1137,7 +1186,10 @@ terraform plan
 
 `aws ec2 terminate-instances`, `aws s3 rb --force`, stack deletion, and `terraform destroy` are destructive. Verify profile, Region, target, backup, and lab status first.
 
-## Interview Preparation
+---
+
+<a id="interview-preparation"></a>
+## 🎯 Interview Preparation
 
 [Main menu](#table-of-contents)
 
