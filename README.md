@@ -7,6 +7,7 @@ A personal AWS learning and engineering knowledge base for beginner and intermed
 ## Table of Contents
 
 - [How to Use These Notes](#how-to-use-these-notes)
+- [Prerequisites and Setup](#prerequisites-and-setup)
 - [AWS Fundamentals](#aws-fundamentals)
 - [Global Infrastructure](#global-infrastructure)
 - [Compute: EC2, AMI, and EBS](#compute-ec2-ami-and-ebs)
@@ -26,6 +27,7 @@ A personal AWS learning and engineering knowledge base for beginner and intermed
 - [Architecture Decision Tables](#architecture-decision-tables)
 - [Interview and Scenario Questions](#interview-and-scenario-questions)
 - [Production Checklist](#production-checklist)
+- [Console Usage and Durable Verification](#console-usage-and-durable-verification)
 
 ## How to Use These Notes
 
@@ -44,6 +46,115 @@ Read the fundamentals first, then follow the service relationships rather than t
 **PRODUCTION RECOMMENDATION:** a baseline that still requires workload-specific review.
 
 Never commit real credentials, private keys, tokens, database passwords, account IDs, public IPs, endpoints, or resource IDs. Use placeholders such as `<ACCESS_KEY_ID>`, `<SECRET_ACCESS_KEY>`, `<AMI_ID>`, `<VPC_ID>`, `<SUBNET_ID>`, `<INSTANCE_ID>`, `<RDS_ENDPOINT>`, `<BUCKET_NAME>`, `<KEY_PAIR_NAME>`, and `<AWS_ACCOUNT_ID>`.
+
+### Current-AWS verification note
+
+Verify pricing, free-tier allowances, quotas, service limits, supported Regions, instance types, runtime versions, CLI options, and console behavior against current AWS documentation before using an example in production. This knowledge base intentionally avoids temporary prices and quotas.
+
+## Prerequisites and Setup
+
+Complete the general setup once, then use the lab-specific prerequisites before each exercise. Verify current installation commands, supported operating systems, service limits, pricing, and Regions against current vendor documentation because they change.
+
+### Knowledge prerequisites
+
+- Basic Linux commands and file permissions
+- Basic networking: IP addresses, ports, DNS, HTTP, and TLS
+- Git basics
+- YAML and JSON basics
+- Basic cloud concepts: regions, identity, networking, and billing
+
+### AWS prerequisites
+
+- An AWS account or approved sandbox with billing alerts
+- A selected Region and awareness that most resources are regional
+- AWS CLI and an approved authentication method
+- Appropriate IAM permissions for the specific lab
+- Basic IAM understanding, including roles and least privilege
+
+### Local-machine prerequisites
+
+The whole knowledge base requires a terminal, browser, text editor, AWS CLI, and an authentication method. Specific labs may additionally require Git, an SSH client or Systems Manager Session Manager, Terraform, a database client, or Linux utilities. Do not install every tool for every lab.
+
+### AWS CLI and authentication setup
+
+**Why you need it:** The CLI is the durable way to inspect and automate many examples in this README.
+
+- **Windows:** install AWS CLI v2 using the current official AWS installer, then open a new PowerShell window.
+- **Ubuntu/Debian x86_64:** use the current official AWS CLI v2 installer; this example downloads the current official archive and may need adjustment for ARM.
+- **Ubuntu/Debian:** distribution packages may lag behind the supported v2 release.
+- **RHEL/Amazon Linux:** use the current official AWS CLI v2 installer or the distribution-supported package where the version is acceptable.
+
+```powershell
+msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
+```
+
+```bash
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+```
+
+Use the current official installation page for ARM, macOS, or a newer installer path. On Windows, run the installer from an elevated terminal only when required by the installer and reopen the terminal afterward.
+
+```bash
+aws --version
+aws sts get-caller-identity
+```
+
+For people, prefer IAM Identity Center or federation. Configure a profile with `aws configure sso`, then authenticate with `aws sso login --profile <PROFILE_NAME>`. For EC2 and AWS services, prefer IAM roles. For automation, prefer temporary role assumption or OIDC rather than long-lived access keys. Common issues are a wrong profile, wrong Region, expired SSO session, or missing IAM permission.
+
+**LAB / LEGACY LEARNING:** `aws configure` with restricted temporary or disposable credentials explains local CLI configuration, but do not commit credentials or make long-lived access keys the normal workload pattern.
+
+### Git and text tools
+
+**Why you need them:** Git retrieves lab application code and tracks configuration; a text editor such as Vim edits Linux configuration files.
+
+- **Windows:** install Git for Windows from the official Git distribution; use PowerShell, Git Bash, or Windows Terminal.
+- **Ubuntu/Debian:** `sudo apt update && sudo apt install -y git vim`
+- **RHEL/Amazon Linux:** `sudo dnf install -y git vim` where `dnf` is available; older systems may use `yum`.
+
+```bash
+git --version
+vim --version
+```
+
+In Vim, press `i` to insert, then `Esc` and `:wq` to save. Common issues are editing the wrong file, insufficient privileges, and forgetting to validate a service configuration before reloading it.
+
+### SSH and Systems Manager access
+
+An SSH client is normally built into modern Windows, macOS, Linux, and most EC2 images. Verify with `ssh -V`. Use `ssh -i <KEY_FILE> <OS_USER>@<PUBLIC_IP>` only for a controlled lab; never paste private-key contents into another server. For production-oriented access, install/configure the SSM Agent where the image does not already include it, attach an instance role with the required Systems Manager permissions, and use the AWS-provided Session Manager plugin or Console integration. Verify with `aws ssm describe-instance-information`.
+
+Session Manager requires the instance to reach the Systems Manager endpoints through internet/NAT or VPC endpoints, and the role and agent must be healthy. It can remove the need for inbound SSH.
+
+### Lab software setup
+
+Install only when the lab requires it:
+
+| Tool | Why it is used | Setup and verification |
+|---|---|---|
+| Nginx | Serves the EC2 web-server labs | Ubuntu/Debian: `sudo apt update && sudo apt install -y nginx`; RHEL/Amazon Linux: `sudo dnf install -y nginx` where supported; verify `nginx -v` and `systemctl status nginx` |
+| MySQL client | Connects to the RDS MySQL lab | Ubuntu/Debian: `sudo apt update && sudo apt install -y mysql-client`; RHEL/Amazon Linux package names vary by repository and engine version, so use the current MySQL client package guidance; verify `mysql --version` |
+| EFS NFS utilities | Mounts EFS from Linux | Ubuntu/Debian: `sudo apt install -y nfs-common`; RHEL/Amazon Linux: `sudo dnf install -y amazon-efs-utils` or the supported NFS utilities; verify `mount.nfs4 -V` |
+| CloudWatch agent | Sends selected OS metrics and logs | Download the current package for the OS from AWS documentation, install it, apply a least-privilege role/configuration, and verify the agent service and log group |
+| `curl` | Tests HTTP endpoints | Usually preinstalled; Ubuntu/Debian: `sudo apt install -y curl`; verify `curl --version` |
+| `dig` | Tests DNS | Ubuntu/Debian: `sudo apt install -y dnsutils`; RHEL/Amazon Linux: `sudo dnf install -y bind-utils`; verify `dig -v` |
+| `htop` | Interactive process inspection | Ubuntu/Debian: `sudo apt install -y htop`; RHEL/Amazon Linux: `sudo dnf install -y htop` where available; verify `htop --version` |
+| `stress` | Controlled lab load generation | Ubuntu/Debian: `sudo apt install -y stress`; use only on disposable instances and verify `stress --version` |
+
+Package names and availability vary by distribution. Never run load generation on production without an approved test plan.
+
+### Terraform setup
+
+**Why you need it:** Terraform is used in the foundational IaC comparison and is optional for the CloudFormation labs.
+
+- **Windows:** install the current Terraform release from HashiCorp or an approved package manager, then reopen the terminal.
+- **Ubuntu/Debian and RHEL/Amazon Linux:** use HashiCorp's current package-repository instructions or the official binary; do not assume an old distribution package is current.
+
+```bash
+terraform version
+```
+
+Common issues are a missing `PATH` entry, an outdated provider lock file, credentials pointing to the wrong profile, and running `terraform destroy` in the wrong directory.
 
 ## AWS Fundamentals
 
@@ -371,14 +482,17 @@ Verify DNS, the security-group path, TLS settings, authentication, and a test qu
 ```mermaid
 flowchart TD
     VPC[VPC and CIDR] --> Subnet[Subnet]
-    Subnet --> RT[Route table]
-    RT --> Paths[IGW / NAT Gateway / VPC endpoint]
-    Paths --> SG[Security group]
-    SG --> NACL[Network ACL]
-    NACL --> Workload[EC2 / ALB / RDS]
+    Subnet --> RT[Associated route table]
+    Subnet --> NACL[Associated network ACL]
+    Subnet --> ENI[Workload ENI]
+    ENI --> SG[Security group]
+    ENI --> Workload[EC2 / ALB / RDS]
+    RT --> IGW[Internet Gateway]
+    RT --> NAT[NAT Gateway]
+    RT --> Endpoint[VPC endpoint]
 ```
 
-A VPC is an isolated regional network. CIDR defines its address range. A subnet is a range in one AZ. A route table selects the next hop. Security groups filter network interfaces statefully; NACLs filter subnet boundaries statelessly with ordered allow/deny rules.
+A VPC is an isolated regional network. CIDR defines its address range and a subnet is a range in one AZ. Subnets are associated with route tables and network ACLs. Workload network interfaces live inside subnets and receive security-group rules. Route tables determine paths through an Internet Gateway, NAT Gateway, or VPC endpoint; these components are related controls and destinations, not a single literal packet-processing chain. Security groups filter network interfaces statefully; NACLs filter subnet boundaries statelessly with ordered allow/deny rules.
 
 ### Public and private subnet flow
 
@@ -393,7 +507,11 @@ flowchart TD
     App --> DB[Private database subnets]
 ```
 
-A subnet is commonly called **public** when its route table has a route to an Internet Gateway. A resource also needs a public address and permissive security controls for actual reachability. A **private** subnet has no direct route to an Internet Gateway; outbound IPv4 internet access can use a NAT Gateway in a public subnet. A database subnet is normally private.
+A **public subnet** is a subnet whose associated route table contains a route to an Internet Gateway. A public subnet does not automatically make every resource inside it publicly reachable. For direct IPv4 internet connectivity, an EC2 resource generally needs an appropriate route to an Internet Gateway, a public IPv4 address or Elastic IP, security-group rules, permitted NACL rules, and an application actually listening on the required port.
+
+A **private subnet** does not have a direct route to an Internet Gateway. Private IPv4 resources can use a NAT Gateway in a public subnet for outbound internet connections; NAT Gateway does not provide unsolicited inbound connectivity. A database subnet is normally private.
+
+**IPv6 note:** NAT Gateway is primarily an IPv4 mechanism. IPv6 resources use IPv6 routes and egress controls such as an egress-only Internet Gateway where appropriate. Do not teach “private internet access always means NAT Gateway”; choose the path based on address family and security requirements.
 
 For a user request, DNS resolves a name, the request reaches a public load balancer, the load balancer selects a healthy target, and the application reaches private dependencies through private routes and security groups. For private outbound updates, the instance route points to NAT, NAT uses the IGW, and return traffic comes back through the established stateful flow. NAT does not accept unsolicited inbound connections.
 
@@ -511,6 +629,24 @@ An ASG maintains **desired capacity** between **minimum** and **maximum** capaci
 
 **Horizontal scaling** adds or removes instances. **Vertical scaling** changes an individual instance size and can require interruption. An ASG is primarily a horizontal replacement and scaling mechanism.
 
+### ALB and ASG relationship
+
+```mermaid
+flowchart TD
+    LT[Launch Template] --> ASG[Auto Scaling Group]
+    ASG --> Instances[EC2 instances]
+    Instances --> TG[Target Group]
+    TG --> ALB[Application Load Balancer]
+    ALB --> Users[Users]
+```
+
+This diagram shows the configuration relationship and registration path. The request path is the reverse: users reach the ALB, the ALB selects healthy targets in the target group, and those targets are instances created and maintained by the ASG from the launch template.
+
+- **Launch Template:** how an EC2 instance should be created.
+- **Auto Scaling Group:** how many instances should exist and when they should be replaced or scaled.
+- **Target Group:** which targets receive traffic and how their health is checked.
+- **ALB:** how incoming HTTP/HTTPS traffic is routed to healthy targets.
+
 ### ALB and ASG lab
 
 1. Build a launch template with a tested user-data script.
@@ -542,11 +678,28 @@ flowchart TD
     Cache --> API[API Gateway origin]
 ```
 
-Use HTTPS viewer policies, private S3 origins with origin access control, cache policies, sensible origin timeouts, and invalidations only when needed. Geographic restrictions are a coarse delivery control, not an identity system. Origin Shield is optional and should be selected based on origin location and traffic pattern.
+For new CloudFront + S3 designs, prefer this relationship:
+
+```mermaid
+flowchart LR
+    Users[Users] --> CloudFront[CloudFront]
+    CloudFront --> OAC[Origin Access Control]
+    OAC --> S3[S3 private bucket]
+```
+
+The S3 bucket does not need to be publicly readable; CloudFront uses OAC to access the private origin. Public S3 website hosting may still be demonstrated as a **LAB ONLY** concept. Origin Access Identity (OAI) is the older approach and should not be the preferred choice for new designs. Also use HTTPS viewer policies, cache policies, sensible origin timeouts, and invalidations only when needed. Geographic restrictions are a coarse delivery control, not an identity system. Origin Shield is optional and should be selected based on origin location and traffic pattern.
+
 
 ### Lambda
 
-Lambda runs short event-driven functions without managing servers. A function does not independently serve a web page; it needs a Function URL, API Gateway, ALB integration, event source, or another invocation path. A function that launches EC2 requires an execution role with scoped EC2 permissions and explicit network parameters.
+Lambda runs event-driven functions without requiring the user to manage servers. Each function is subject to service and runtime constraints such as timeout, memory, concurrency, supported runtime, and deployment/package-size limits. A function does not independently serve a web page; it needs a Function URL, API Gateway, ALB integration, event source, or another invocation path. A function that launches EC2 requires an execution role with scoped EC2 permissions and explicit network parameters.
+
+```mermaid
+flowchart LR
+    Event[API, schedule, queue, or AWS event] --> Lambda[Lambda function]
+    Lambda --> Service[AWS service or response]
+    Lambda --> Logs[CloudWatch Logs and metrics]
+```
 
 **LAB ONLY:** a scheduled Lambda that stops tagged lab instances can reduce cost, but test exclusions, time zones, permissions, and failure notifications.
 
@@ -631,6 +784,15 @@ When access is denied, check identity policy, resource policy, trust policy, SCP
 
 **Answer:** Attach an instance-profile role with an EC2 trust policy and a least-privilege permissions policy scoped to the bucket and required object actions.
 
+### Secrets Manager versus Parameter Store
+
+| Service | Good fit | Decision factors |
+|---|---|---|
+| Secrets Manager | Application secrets, database credentials, rotation, and secret lifecycle | Rotation integrations, retrieval pattern, lifecycle, and cost |
+| Parameter Store | Application configuration, parameters, and appropriate encrypted parameters | Simpler configuration storage, hierarchy, retrieval needs, and cost |
+
+Do not reduce the decision to “passwords versus everything else.” Consider rotation, integrations, access patterns, lifecycle, compliance, and cost. Never put secret values directly in this README, templates, user data, or source control.
+
 ## Monitoring and Audit
 
 ### CloudWatch
@@ -644,6 +806,16 @@ When access is denied, check identity policy, resource policy, trust policy, SCP
 
 Linux `top`, `free`, `df`, and `systemctl` are host-level checks, not CloudWatch by themselves. Install and configure the CloudWatch agent when OS metrics or logs are needed.
 
+### CloudWatch, CloudTrail, and EventBridge
+
+| Service | Main question | Core capabilities |
+|---|---|---|
+| CloudWatch | Is my system healthy? | Metrics, logs, alarms, dashboards |
+| CloudTrail | Who did what in AWS? | API activity, identity, source, timestamp, API event |
+| EventBridge | What should happen when an event occurs? | Event routing, automation, schedules, AWS/application events |
+
+These services complement one another. CloudWatch measures operations, CloudTrail records AWS API activity, and EventBridge routes events to actions; none replaces the others.
+
 ### CloudTrail
 
 CloudTrail answers who called which AWS API, when, from where, and with what result. Management events cover control-plane operations. Data events, such as S3 object access, provide object-level detail but can create more volume and cost.
@@ -656,6 +828,7 @@ flowchart LR
     Trail --> Log[S3 log archive]
     Log --> Alert[Detection and investigation]
     Resource --> CW[CloudWatch metrics/logs]
+    CW --> EB[EventBridge or alarm action]
 ```
 
 ### CloudTrail lab
@@ -686,6 +859,8 @@ Verify principal, timestamp, Region, resource, and outcome. Delivery can be dela
 - **Multi-Region:** regional recovery and data residency option with more cost and complexity.
 
 **RPO** is the maximum acceptable data loss. **RTO** is the maximum acceptable recovery time.
+
+For example, an **RPO of 15 minutes** means the recovery design should lose no more than about 15 minutes of accepted data. An **RTO of 1 hour** means the service should be restored and usable within one hour. Meeting those targets requires suitable replication or backup frequency, restore automation, dependencies, permissions, DNS, and a tested runbook; a backup existing somewhere does not automatically satisfy either target.
 
 ```mermaid
 flowchart LR
@@ -781,6 +956,16 @@ Outputs:
 
 **LAB ONLY:** this omits production launch-template, private-subnet, patching, monitoring, and recovery design. Do not hardcode AMIs, account IDs, key names, IPs, instance IDs, bucket names, or secrets.
 
+### CloudFormation learning progression
+
+This intentionally minimal example is **LAB / LEARNING** material. Its purpose is to make the relationship between a template, parameters, resources, outputs, and intrinsic functions easy to understand before introducing more moving parts.
+
+1. **Stage 1:** Understand the template, parameter, resource, output, and intrinsic-function concepts.
+2. **Stage 2:** Add an IAM role, launch template, user data, encrypted EBS, monitoring, and consistent tags.
+3. **Stage 3:** Move toward multiple AZs, private networking, an ALB, Auto Scaling, production-style recovery, change sets, and drift detection.
+
+The minimal example is not a production architecture; it is a small learning step that can be validated and deleted safely.
+
 ### CloudFormation workflow
 
 ```bash
@@ -796,6 +981,56 @@ Inspect stack status, resource status, outputs, and events. Review a change set 
 
 **Answer:** Review the change set, replacement behavior, deletion policy, backups, dependencies, downtime, and rollback path. Stop and revise the template if the impact is not intentional and recoverable.
 
+### Terraform fundamentals
+
+Terraform is a declarative Infrastructure as Code tool that provisions AWS resources from configuration files. It is an additional option, not a replacement that is universally better than CloudFormation.
+
+```mermaid
+flowchart LR
+        Config[Terraform configuration] --> Plan[terraform plan]
+        Plan --> Apply[terraform apply]
+        Apply --> Provider[AWS provider]
+        Provider --> Resources[AWS resources]
+        Apply --> State[Terraform state]
+```
+
+Core concepts:
+
+- **Provider:** plugin that translates configuration into AWS API operations.
+- **Resource:** an object Terraform manages.
+- **Variable:** reusable input.
+- **Output:** value exposed after an apply.
+- **Module:** reusable group of configuration.
+- **State:** record of Terraform's view of managed resources; protect and manage it carefully.
+- **Plan:** preview of proposed changes.
+- **Apply:** execute approved changes.
+- **Destroy:** remove managed resources; destructive and requiring explicit review.
+
+```hcl
+terraform {
+    required_providers {
+        aws = {
+            source = "hashicorp/aws"
+        }
+    }
+}
+
+variable "region" {
+    type    = string
+    default = "<AWS_REGION>"
+}
+
+provider "aws" {
+    region = var.region
+}
+
+output "selected_region" {
+    value = var.region
+}
+```
+
+Use CloudFormation when AWS-native infrastructure, deep AWS integration, or CloudFormation-specific capabilities are the priority. Consider Terraform for multi-provider or multi-cloud environments, teams standardized on Terraform, or a broader provider ecosystem. In either tool, review plans, protect state, avoid plaintext secrets, and use separate environments and state boundaries.
+
 ## Practical Labs
 
 ### Lab checklist
@@ -805,6 +1040,8 @@ Every lab should include an objective, architecture, prerequisites, steps, verif
 Use a disposable account or sandbox with budgets and tags such as `Environment=lab`. Avoid public access and broad policies except for a deliberately isolated exercise.
 
 ### Preserved lab index
+
+Before starting a lab, complete the relevant setup in [Prerequisites and Setup](#prerequisites-and-setup). Most AWS labs require AWS CLI/authentication, a selected Region, IAM permissions, billing awareness, and cleanup tags. EC2 labs may additionally require Git and SSH or Session Manager; RDS labs require a MySQL client; EFS labs require NFS utilities; load tests require `stress` on a disposable instance.
 
 - **EC2 web server:** launch EC2, install Nginx, serve a test site, inspect logs, and troubleshoot a port change.
 - **S3 storage:** create buckets, upload objects, configure SRR/CRR, presigned URLs, lifecycle rules, transfer acceleration, and batch operations.
@@ -980,6 +1217,10 @@ For AWS failures, check identity and Region first, then resource state, DNS and 
 | NAT Gateway vs VPC endpoint | Public outbound dependency vs private AWS-service path | NAT hourly/data charges; endpoints are service-specific |
 | RDS Multi-AZ vs read replica | Failover/availability vs read scaling | Multi-AZ is not a read-scaling feature |
 | Snapshot vs AMI vs AWS Backup | Volume restore vs EC2 image provisioning vs policy backup | Test restore and retention behavior |
+| CloudFormation vs Terraform | AWS-native stack management vs multi-provider IaC | Both require reviewed plans, protected state, and secret handling |
+| Secrets Manager vs Parameter Store | Rotated secrets vs configuration/parameters | Choose by rotation, lifecycle, integrations, and cost |
+| CloudWatch vs CloudTrail vs EventBridge | Health vs audit vs event reaction | These services complement rather than replace one another |
+| CloudFront OAC vs public S3 access | Private origin access vs disposable public website demo | OAC is preferred for new production patterns |
 
 ## Interview and Scenario Questions
 
@@ -1075,6 +1316,28 @@ For AWS failures, check identity and Region first, then resource state, DNS and 
 
 **Answer:** A difference between the declared template and actual resource configuration, often caused by manual changes.
 
+### Additional interview questions
+
+**Question:** Why use OAC with CloudFront and S3?
+
+**Answer:** OAC allows CloudFront to read a private S3 origin without making the bucket publicly readable. It is the preferred modern pattern for new CloudFront + S3 designs; OAI is the older approach.
+
+**Question:** Why is a public subnet not automatically public to users?
+
+**Answer:** The subnet route is only one condition. The resource also needs an appropriate public address, security-group and NACL rules, and a service listening on the requested port.
+
+**Question:** Terraform or CloudFormation?
+
+**Answer:** Choose based on team standards and scope. CloudFormation is AWS-native; Terraform is useful for multi-provider or multi-cloud environments. Neither is universally better.
+
+**Question:** What is the difference between Secrets Manager and Parameter Store?
+
+**Answer:** Both can store configuration-related values. Secrets Manager is often a better fit for managed secrets and rotation; Parameter Store often fits hierarchical application configuration and suitable encrypted parameters. Requirements and cost decide.
+
+**Question:** What is the difference between CloudWatch, CloudTrail, and EventBridge?
+
+**Answer:** CloudWatch observes health, CloudTrail audits AWS API activity, and EventBridge routes events to automation.
+
 ### Scenario: web server unreachable
 
 **Answer:** Check the service locally, listener port, OS logs, instance state, public/private addressing, subnet route, IGW/NAT path, security group, NACL, DNS, and load-balancer health checks in that order.
@@ -1093,6 +1356,10 @@ For AWS failures, check identity and Region first, then resource state, DNS and 
 - [ ] Tag resources, set budgets, and remove lab resources promptly.
 - [ ] Review NAT, data-transfer, load-balancer, RDS, storage, and log-retention costs.
 - [ ] Keep console instructions as orientation only; prefer CLI, API, and IaC as the source of truth.
+
+## Console Usage and Durable Verification
+
+Console labels and locations may change. Use the Console to understand a service or inspect a resource, but prefer CLI, API, and IaC for repeatable work. For each console-oriented action, identify the conceptual choices first, use the equivalent CLI/API/IaC where practical, and verify the resulting resource state, network path, identity, logs, metrics, and costs.
 
 ## Source Notes and Corrections
 
