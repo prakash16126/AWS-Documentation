@@ -1,12 +1,13 @@
-# Practical AWS & DevOps Field Guide
+# AWS From Zero: Learn by Building
 
-A personal AWS learning and engineering knowledge base for beginner and intermediate DevOps learners. It combines simple explanations, classroom analogies, practical commands, architecture reasoning, troubleshooting, labs, and interview preparation.
+A practical AWS and DevOps learning guide for beginners and intermediate learners. You will build a small web application step by step, observe what AWS does, change one thing at a time, troubleshoot failures, and then connect the result to production architecture and interview scenarios.
 
 > This is not official AWS documentation. Console labels, quotas, pricing, and service behavior change. Verify production decisions against current AWS documentation.
 
 ## Table of Contents
 
 - [How to Use These Notes](#how-to-use-these-notes)
+- [Learning Roadmap](#learning-roadmap)
 - [Prerequisites and Setup](#prerequisites-and-setup)
 - [AWS Fundamentals](#aws-fundamentals)
 - [Global Infrastructure](#global-infrastructure)
@@ -21,13 +22,97 @@ A personal AWS learning and engineering knowledge base for beginner and intermed
 - [Monitoring and Audit](#monitoring-and-audit)
 - [High Availability, Backup, and DR](#high-availability-backup-and-dr)
 - [Infrastructure as Code](#infrastructure-as-code)
+- [Optional DevOps Integration](#optional-devops-integration)
 - [Practical Labs](#practical-labs)
 - [CLI and Command Reference](#cli-and-command-reference)
 - [Linux and AWS Troubleshooting](#linux-and-aws-troubleshooting)
 - [Architecture Decision Tables](#architecture-decision-tables)
 - [Interview and Scenario Questions](#interview-and-scenario-questions)
+- [AWS Scenario-Based Interview Challenge](#aws-scenario-based-interview-challenge)
 - [Production Checklist](#production-checklist)
 - [Console Usage and Durable Verification](#console-usage-and-durable-verification)
+
+## Learning Roadmap
+[Main menu](#table-of-contents)
+
+Follow the guide in this order. Do not try to understand the final architecture before building the earlier pieces.
+
+```text
+AWS basics
+    ↓
+One EC2 web server
+    ↓
+Storage and networking
+    ↓
+IAM and secure access
+    ↓
+RDS database
+    ↓
+ALB and multiple EC2 instances
+    ↓
+Auto Scaling and failure recovery
+    ↓
+CloudFront and Route 53
+    ↓
+CloudWatch, CloudTrail, and EventBridge
+    ↓
+CloudFormation and Terraform
+    ↓
+Cross-service scenarios and production thinking
+```
+
+### The running project
+
+The project grows gradually:
+
+1. Launch one EC2 instance and install Nginx.
+2. Put the application in a sensible VPC and control access with security groups.
+3. Add S3 for objects and EFS only when shared file access is needed.
+4. Add RDS when application data needs a relational database.
+5. Create a second web server, then place an ALB in front of both.
+6. Replace manual servers with an Auto Scaling group and launch template.
+7. Add CloudFront and Route 53 after the origin works directly.
+8. Add monitoring, audit, backup, and Infrastructure as Code.
+
+The full production-style architecture is a destination, not a starting diagram:
+
+```mermaid
+flowchart TD
+    Users[Users] --> DNS[Route 53]
+    DNS --> CDN[CloudFront]
+    CDN --> ALB[Application Load Balancer]
+    ALB --> ASG[Auto Scaling group]
+    ASG --> EC2A[EC2 in AZ-A]
+    ASG --> EC2B[EC2 in AZ-B]
+    EC2A --> RDS[RDS Multi-AZ]
+    EC2B --> RDS
+    EC2A --> S3[S3]
+    EC2B --> S3
+```
+
+### How each lesson works
+
+Each major service follows this loop:
+
+```text
+Need something
+    ↓
+Brief concept
+    ↓
+Build it
+    ↓
+Verify the result
+    ↓
+Change one thing
+    ↓
+Observe the failure or new behavior
+    ↓
+Explain why
+    ↓
+Apply it to a scenario
+```
+
+When a section says **Predict**, pause before running the command. When it says **Experiment**, use only a disposable lab resource. When it says **What just happened?**, connect your observation to the AWS component that caused it.
 
 ## How to Use These Notes
 [Main menu](#table-of-contents)
@@ -207,6 +292,21 @@ Authentication identifies the caller. Authorization decides what that caller can
 
 **Answer:** Make changes repeatable through Infrastructure as Code and pipelines, add validation and change review, define rollback, and monitor the deployment and application.
 
+### Checkpoint: AWS basics
+
+Try answering before reading further:
+
+1. What problem does cloud computing solve?
+2. What is the difference between a Region and an Availability Zone?
+3. Which parts of an AWS change are identity, network, and application concerns?
+4. Why is a single AZ not a complete disaster-recovery plan?
+
+**Answers:** Cloud provides on-demand infrastructure; a Region contains isolated AZs; IAM controls who can act, networking controls the path, and the application must respond; an AZ failure still affects a single-AZ design.
+
+### Can I explain this without looking?
+
+Explain AWS, Region, AZ, control plane, and data plane to someone who knows Linux but has never used cloud services.
+
 ## Global Infrastructure
 [Main menu](#table-of-contents)
 
@@ -232,6 +332,17 @@ Multi-AZ improves availability during an AZ failure. It does not automatically p
 **Scenario question:** An application is deployed in one AZ and that AZ becomes unavailable. What does a second Region alone solve?
 
 **Answer:** Nothing automatically. The workload needs resources, data, identity, networking, DNS, and a tested recovery process in the second Region. Multi-AZ is the nearer-term control for an AZ failure.
+
+### Try it: choose a Region
+
+Before creating resources, choose a Region based on latency, data residency, service availability, and cost. Set it explicitly in the Console and CLI profile.
+
+```bash
+aws configure set region <AWS_REGION> --profile <PROFILE_NAME>
+aws ec2 describe-availability-zones --profile <PROFILE_NAME> --query 'AvailabilityZones[].ZoneName'
+```
+
+**Expected result:** the command lists AZs in the selected Region. **Experiment:** run the same command with a different Region and compare the AZ names. **What just happened?** Resource names, quotas, AMI IDs, and service availability can vary by Region; a command without the intended profile or Region can inspect the wrong environment.
 
 ## Compute: EC2, AMI, and EBS
 [Main menu](#table-of-contents)
@@ -329,8 +440,37 @@ curl -I http://localhost
 
 **Answer:** Check the application locally, listener port, service logs, instance status, public address, subnet route, Internet Gateway path, security group, NACL, DNS, and load-balancer health in that order.
 
+### Experiment: stop the application, not the instance
+
+```bash
+sudo systemctl stop nginx
+curl -I http://localhost
+sudo systemctl start nginx
+```
+
+**Predict:** the EC2 instance remains running, but the local request fails while Nginx is stopped. **What just happened?** `Running` describes the virtual machine state, not application availability. Restore the service before continuing.
+
+### Checkpoint: first EC2 lab
+
+1. Why can a running instance still return no webpage?
+2. Which port does HTTP normally use?
+3. Why is a private IP not normally usable directly from the public internet?
+4. What should be checked before using `terminate-instances`?
+
+**Answers:** The application, route, address, or firewall may be wrong; HTTP commonly uses port 80; private addresses are not internet-routable; verify Region, profile, instance ID, backups, and that the resource is disposable.
+
 ## Storage: S3 and EFS
 [Main menu](#table-of-contents)
+
+### First understand storage
+
+Storage means keeping data after a process or server stops. The access pattern determines the service:
+
+- **Block storage:** a disk attached to a server, such as EBS.
+- **File storage:** a shared filesystem mounted by clients, such as EFS.
+- **Object storage:** objects retrieved through an API, such as S3.
+
+Do not choose between EBS, EFS, and S3 by file count. Ask how the application reads, writes, shares, locks, scales, and recovers the data.
 
 ### S3
 
@@ -388,6 +528,26 @@ Verify bucket Region, IAM identity, bucket policy, object key, encryption permis
 
 **Answer:** No. Measure the request path first. CloudFront is usually the latency control for global reads; CRR is mainly for resilience, compliance, or regional data placement.
 
+### Experiment: observe S3 access control
+
+```bash
+aws s3 cp ./file.txt s3://<BUCKET_NAME>/file.txt
+aws s3api head-object --bucket <BUCKET_NAME> --key file.txt
+```
+
+**Predict:** the upload succeeds only when the caller has `s3:PutObject`; metadata retrieval requires permission to inspect the object. In a disposable bucket, temporarily remove the relevant permission or use a role without it, repeat the command, and observe `AccessDenied`. Restore the permission afterward.
+
+**What just happened?** The object can exist while a particular identity cannot read its metadata. S3 authorization combines identity policies, bucket policies, object ownership, encryption permissions, and explicit denies.
+
+### Checkpoint: S3
+
+1. Why is a bucket not the same as a filesystem folder?
+2. When is CloudFront a better answer than CRR?
+3. Why should a production bucket usually remain private?
+4. What must be cleaned up in a versioned test bucket?
+
+**Answers:** A bucket is an object namespace with key prefixes; CloudFront improves global read delivery while CRR is asynchronous replication; OAC or controlled API access reduces exposure; object versions and delete markers may also need deletion.
+
 ### EFS
 
 Amazon Elastic File System is managed, elastic NFS file storage mounted by multiple clients.
@@ -425,8 +585,46 @@ Use encryption, POSIX permissions, access points where useful, and security grou
 
 **Answer:** Check the second instance's AZ mount target, DNS resolution, NFS TCP 2049 security-group rules, subnet routes, POSIX permissions, and mount configuration.
 
+### Experiment: shared file behavior
+
+Create a file on the first mounted client, then inspect the same path from the second client.
+
+```bash
+touch /var/www/html/shared/from-client-a
+ls -l /var/www/html/shared
+```
+
+**Predict:** the second client sees the file because both clients mount the same EFS filesystem. Unmount one client and observe that the other still has access. **What just happened?** EFS is shared file storage; it is not a copied folder on each EC2 instance.
+
+### Checkpoint: storage choice
+
+1. Which service gives an EC2 instance a block device?
+2. Which service is appropriate for shared NFS-style files?
+3. Which service is appropriate for API-based media and backups?
+4. What is the difference between an EBS snapshot and an AMI?
+
+**Answers:** EBS; EFS; S3; a snapshot backs up an EBS volume while an AMI packages launchable instance configuration and referenced snapshots.
+
 ## Database: RDS
 [Main menu](#table-of-contents)
+
+### Database basics before RDS
+
+A database stores application data so it survives a web-server restart or replacement. In a relational database, a **table** contains rows, each row is a record, and columns describe fields. A **primary key** identifies a row. SQL is the language used to create, read, update, and delete relational data.
+
+Do not normally keep the production database only on the web server: replacing or losing that server would also risk the application data. RDS separates managed database operations from the compute serving web requests.
+
+```sql
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    name VARCHAR(100)
+);
+
+INSERT INTO users (id, name) VALUES (1, 'lab-user');
+SELECT * FROM users;
+```
+
+**LAB ONLY:** use placeholder or disposable data. Do not store real passwords in example SQL.
 
 Amazon RDS is a managed relational database service. AWS manages much of provisioning, patching, backups, monitoring, and failure handling while the team chooses the engine, instance class, storage, schema, access model, and maintenance window.
 
@@ -482,8 +680,55 @@ Verify DNS, the security-group path, TLS settings, authentication, and a test qu
 
 **Answer:** Use Multi-AZ for availability and failover, and consider read replicas for read scaling. They solve different problems.
 
+### Experiment: prove the database network boundary
+
+From the approved EC2 client, test the RDS endpoint. In a disposable lab, remove the EC2-to-RDS security-group rule and repeat the connection.
+
+```bash
+mysql -u <DB_USER> -h <RDS_ENDPOINT> -p
+```
+
+**Predict:** the connection should fail or time out while the rule is removed, even though the RDS service still exists. Restore the rule and test again. **What just happened?** Database availability and database reachability are different concerns; the security group controls which network identities can connect.
+
+### Checkpoint: RDS
+
+1. Why should RDS normally be in private subnets?
+2. What problem does Multi-AZ solve?
+3. What problem does a read replica solve?
+4. Why should credentials come from Secrets Manager or another controlled mechanism?
+
+**Answers:** To avoid direct internet exposure; failover availability; read scaling and selected recovery patterns; to avoid embedding long-lived secrets in code, images, or shell history.
+
 ## Networking as One System
 [Main menu](#table-of-contents)
+
+### Networking from absolute zero
+
+Start with the path a request takes:
+
+```text
+Computer
+    ↓
+Network
+    ↓
+IP address
+    ↓
+Port and protocol
+    ↓
+HTTP / HTTPS
+    ↓
+DNS name
+    ↓
+Firewall rules
+    ↓
+Subnet and CIDR
+    ↓
+Route table
+    ↓
+Internet Gateway or NAT
+```
+
+An IP address identifies a network endpoint. A port identifies a service on that endpoint. A protocol defines how the endpoints communicate. DNS maps a name to an address. A firewall decides whether traffic is allowed. AWS VPC concepts build on these basics rather than replacing them.
 
 ### Mental model
 
@@ -563,6 +808,28 @@ Check subnet association, route target/state, security-group ingress and egress,
 
 **Answer:** Check the private subnet route to a NAT Gateway or required VPC endpoint, the NAT subnet route to an Internet Gateway, security-group egress, NACL return rules, DNS, and destination policies.
 
+### Experiment: remove one network dependency
+
+From a disposable public-subnet EC2 instance, verify the current path:
+
+```bash
+ip addr
+ip route
+curl -I https://aws.amazon.com
+```
+
+**Predict:** removing the default route or blocking egress should prevent the external request while local network information still works. Change only one disposable control, observe the failure, then restore it. **What just happened?** A running instance, a public IP, a route, and firewall rules are separate requirements; success depends on the complete path.
+
+### Checkpoint: networking
+
+1. What makes a subnet public?
+2. Why does a public subnet not make every resource publicly reachable?
+3. What is the difference between a security group and a NACL?
+4. Why does a private IPv4 subnet use NAT Gateway for outbound internet access?
+5. What is different for IPv6?
+
+**Answers:** Its route table has an IGW route; the resource still needs an address, rules, and a listening service; security groups are stateful ENI controls while NACLs are stateless subnet controls; NAT translates outbound private IPv4 traffic; IPv6 uses IPv6 routing and egress controls rather than assuming NAT.
+
 ## Route 53 and DNS
 [Main menu](#table-of-contents)
 
@@ -607,6 +874,26 @@ Use least-privilege Route 53 permissions, protect domain-registration access wit
 **Scenario question:** DNS failover changed to the backup endpoint, but some users still reach the old endpoint. Why?
 
 **Answer:** Recursive resolvers and clients may still have the old record cached until its TTL expires. Verify authoritative answers, TTL, health-check state, and the backup application's readiness.
+
+### Experiment: see DNS caching
+
+Inspect the same record from your local resolver and from an authoritative lookup where available:
+
+```bash
+dig <DOMAIN_NAME>
+dig <DOMAIN_NAME> +short
+```
+
+**Predict:** the answer includes a TTL, and different resolvers may temporarily return an older value until that TTL expires. **What just happened?** Route 53 publishes DNS answers, but clients and recursive resolvers cache them; DNS changes are not always immediately visible everywhere.
+
+### Checkpoint: DNS
+
+1. What does Route 53 resolve?
+2. What does TTL control?
+3. Why is DNS failover not instantaneous?
+4. When would you use a private hosted zone?
+
+**Answers:** Names to records/endpoints; how long a resolver may cache an answer; cached answers and application readiness remain; for DNS names resolvable only from associated VPCs.
 
 ## Load Balancing and Auto Scaling
 [Main menu](#table-of-contents)
@@ -673,6 +960,26 @@ Terminate one managed instance and verify the ASG replaces it while the ALB cont
 
 **Answer:** Test the health-check path locally on a target, confirm the process listens on the target port, inspect application logs, then check target and load-balancer security groups, NACLs, routes, and the health-check response code.
 
+### Experiment: make the ALB remove a target
+
+With two disposable web servers returning visibly different responses, stop Nginx on one target:
+
+```bash
+sudo systemctl stop nginx
+```
+
+Refresh the ALB endpoint and inspect target health. **Predict:** traffic should continue to the healthy target after the health-check interval. Start Nginx again and observe the target return after it passes health checks. **What just happened?** The target group, not the ASG alone, determines whether the ALB sends traffic to a target.
+
+### Checkpoint: ALB and Auto Scaling
+
+1. What does the launch template define?
+2. What does desired capacity mean?
+3. What does a target group health check prove?
+4. Why can the ALB stay available when one instance fails?
+5. Why does an ASG need a max capacity?
+
+**Answers:** How to create an instance; the number currently intended; whether the target responds to the configured check, not whether every dependency is healthy; it can route to other healthy targets; to bound cost and capacity.
+
 ## CDN, Lambda, WAF, and Shield
 [Main menu](#table-of-contents)
 
@@ -736,6 +1043,22 @@ Start new WAF rules in `COUNT` where safe, inspect sampled requests and logs, th
 
 **Answer:** Review sampled requests and metrics, switch the rule to `COUNT` or narrow its scope, test an exception, and only then return to `BLOCK`.
 
+### Experiment: compare direct origin and cached delivery
+
+Request the origin directly, then request the CloudFront URL twice. Inspect response headers and latency where possible.
+
+**Predict:** the first request may reach the origin and a later request may be served from an edge cache depending on the cache policy. **What just happened?** CloudFront changes the delivery path; it does not replace origin security, application authorization, or cache invalidation decisions.
+
+### Checkpoint: edge and serverless services
+
+1. Why should a new S3 origin normally be private?
+2. What does OAC provide?
+3. What invokes a Lambda function?
+4. What does WAF inspect?
+5. What does Shield primarily address?
+
+**Answers:** To reduce direct exposure; controlled CloudFront access to S3; a Function URL, API Gateway, ALB, event source, or AWS service; Layer 7 HTTP requests; DDoS protection at supported layers and services.
+
 ## Identity and Security
 [Main menu](#table-of-contents)
 
@@ -795,6 +1118,27 @@ When access is denied, check identity policy, resource policy, trust policy, SCP
 **Scenario question:** An EC2 application must read one S3 bucket without storing credentials. What should you implement?
 
 **Answer:** Attach an instance-profile role with an EC2 trust policy and a least-privilege permissions policy scoped to the bucket and required object actions.
+
+### Experiment: remove credentials from the design
+
+Use an EC2 instance profile instead of putting access keys on the server. Verify the active identity from the instance:
+
+```bash
+aws sts get-caller-identity
+aws s3 ls s3://<BUCKET_NAME>
+```
+
+**Predict:** the first command identifies the role-backed caller and the second succeeds only if that role permits the bucket action. **What just happened?** STS supplies temporary credentials through the role; the application does not need a copied secret file.
+
+### Checkpoint: IAM
+
+1. What is the difference between authentication and authorization?
+2. Who is allowed to assume a role?
+3. What does a permissions policy control?
+4. Why are long-lived access keys risky on EC2?
+5. What should you inspect when an action is denied?
+
+**Answers:** Authentication identifies you and authorization decides what you may do; the trust policy controls who may assume a role; permissions control allowed actions and resources; keys can be copied and remain valid; inspect identity/resource policies, trust policy, boundaries, SCPs, session policies, KMS, Region, and explicit denies.
 
 ### Secrets Manager versus Parameter Store
 
@@ -863,6 +1207,22 @@ Verify principal, timestamp, Region, resource, and outcome. Delivery can be dela
 
 **Answer:** Use CloudTrail to identify the API call, principal, source IP, Region, timestamp, and result. Then contain the identity and preserve evidence.
 
+### Experiment: create a monitoring signal
+
+Use a disposable EC2 instance to generate controlled CPU load, then inspect a CloudWatch metric and alarm. For audit, make a harmless API change and find it in CloudTrail. For automation, route a selected event through EventBridge to a non-destructive target.
+
+**Predict:** CloudWatch shows system behavior, CloudTrail shows the API actor and event, and EventBridge reacts to a matching event. **What just happened?** These are complementary observability and automation services, not interchangeable monitoring products.
+
+### Checkpoint: monitoring
+
+1. Is a Linux `top` result automatically a CloudWatch metric?
+2. What question does CloudTrail answer?
+3. What does an alarm evaluate?
+4. When should CloudTrail data events be enabled selectively?
+5. What is EventBridge useful for?
+
+**Answers:** No, the agent or service integration must publish it; who did what, when, and from where; a metric condition; object-level or high-volume events can add cost; routing and reacting to AWS or application events.
+
 ## High Availability, Backup, and DR
 [Main menu](#table-of-contents)
 
@@ -906,6 +1266,22 @@ Backup is not instant HA. Test restore time and application consistency against 
 **Scenario question:** A regional outage occurs and the team has backups in another Region. Can it meet a one-hour RTO automatically?
 
 **Answer:** Not necessarily. Test restore duration, quotas, networking, DNS, IAM, KMS, secrets, application artifacts, data consistency, and the recovery runbook.
+
+### Experiment: learn HA by taking something away
+
+Start with one disposable EC2 web server, then add a second server in another AZ and place an ALB in front of them. Stop Nginx on one server, then terminate one managed instance only when the ASG lab is ready.
+
+**Predict:** one server can fail while the ALB still serves from a healthy target; the ASG should replace a managed instance. **What just happened?** High availability is observed behavior created by redundancy, health checks, routing, and replacement. A backup alone would not keep the live request path serving.
+
+### Checkpoint: HA and DR
+
+1. What failure does Multi-AZ address?
+2. What failure may require Multi-Region recovery?
+3. What does an RPO of 15 minutes mean?
+4. What does an RTO of 1 hour mean?
+5. Why must restore be tested?
+
+**Answers:** An AZ or component failure; a larger regional disruption; about 15 minutes is the maximum intended data loss; service should be usable within one hour; permissions, dependencies, duration, and application consistency are often different from the backup itself.
 
 ## Infrastructure as Code
 [Main menu](#table-of-contents)
@@ -996,6 +1372,22 @@ Inspect stack status, resource status, outputs, and events. Review a change set 
 
 **Answer:** Review the change set, replacement behavior, deletion policy, backups, dependencies, downtime, and rollback path. Stop and revise the template if the impact is not intentional and recoverable.
 
+### Experiment: feel the pain IaC solves
+
+Create a disposable resource manually, record its settings, then make the same change in the parameterized template or Terraform configuration.
+
+**Predict:** manual changes are harder to review and reproduce; code makes the intended change visible and repeatable. **What just happened?** IaC is not just a shortcut. It creates a reviewable desired state, but state files, secrets, drift, replacement behavior, and destructive plans still require care.
+
+### Checkpoint: Infrastructure as Code
+
+1. What problem does IaC solve after a manual lab works?
+2. What does a CloudFormation change set show?
+3. What is Terraform state used for?
+4. Why should plans be reviewed before apply?
+5. What is drift?
+
+**Answers:** Repeatability and review; proposed stack changes; Terraform's record of managed resources; to detect replacement, deletion, downtime, and scope; actual infrastructure differing from declared code.
+
 ### Terraform fundamentals
 
 Terraform is a declarative Infrastructure as Code tool that provisions AWS resources from configuration files. It is an additional option, not a replacement that is universally better than CloudFormation.
@@ -1046,6 +1438,31 @@ output "selected_region" {
 
 Use CloudFormation when AWS-native infrastructure, deep AWS integration, or CloudFormation-specific capabilities are the priority. Consider Terraform for multi-provider or multi-cloud environments, teams standardized on Terraform, or a broader provider ecosystem. In either tool, review plans, protect state, avoid plaintext secrets, and use separate environments and state boundaries.
 
+## Optional DevOps Integration
+[Main menu](#table-of-contents)
+
+This section stays deliberately small. The AWS learning path comes first; CI/CD is useful when the application and infrastructure already work manually.
+
+### The practical progression
+
+```text
+Git commit
+    ↓
+Build and test
+    ↓
+Review infrastructure/application change
+    ↓
+Deploy with a role
+    ↓
+Verify health
+    ↓
+Rollback when needed
+```
+
+Use Git to track the application, user-data scripts, CloudFormation, or Terraform. A pipeline should run validation and tests before changing AWS. For GitHub Actions, prefer OIDC to assume an AWS role with temporary credentials; do not store long-lived access keys as repository secrets. Keep deployment permissions narrow and require review for production environments.
+
+**Experiment:** make a harmless documentation or configuration change, run the same validation locally and in a workflow, then compare the logs. **What just happened?** Automation makes the repeatable path visible; it does not make an unsafe change safe by itself.
+
 ## Practical Labs
 [Main menu](#table-of-contents)
 
@@ -1074,6 +1491,22 @@ Before starting a lab, complete the relevant setup in [Prerequisites and Setup](
 - **WAF:** attach a Web ACL, begin with count mode, verify sampled requests, then clean up.
 - **CloudFormation:** validate a parameterized template, create a stack, preview a change set, update, and inspect drift.
 - **AWS Backup:** create and restore a test backup and verify the recovered resource.
+
+### Suggested build order
+
+Use the existing labs as connected milestones rather than unrelated exercises:
+
+1. **First website:** EC2, Nginx, security group, public subnet, and `curl`.
+2. **Make the path private:** understand VPC, subnet, route table, IGW, NAT, and Session Manager.
+3. **Keep data separately:** compare EBS, EFS, and S3; upload one object and mount one shared file system.
+4. **Add application data:** connect a controlled EC2 client to private RDS and test a simple table/query.
+5. **Survive one server failure:** create two visibly different web servers, register them in a target group, and test ALB health checks.
+6. **Replace manual capacity:** move instance creation into a launch template and ASG, then test replacement and controlled scaling.
+7. **Add the public edge:** use CloudFront with OAC for private S3 content and Route 53 for names only after the origin works.
+8. **Operate it:** create CloudWatch signals, find an API change in CloudTrail, and route one safe event with EventBridge.
+9. **Make it repeatable:** validate the CloudFormation example, review a change set, and compare the Terraform plan conceptually.
+
+At each milestone, stop and write down: what changed, what you expected, what you observed, and which AWS component explains the result.
 
 ### Cleanup checklist
 
@@ -1361,6 +1794,75 @@ For AWS failures, check identity and Region first, then resource state, DNS and 
 ### Scenario: web server unreachable
 
 **Answer:** Check the service locally, listener port, OS logs, instance state, public/private addressing, subnet route, IGW/NAT path, security group, NACL, DNS, and load-balancer health checks in that order.
+
+## AWS Scenario-Based Interview Challenge
+[Main menu](#table-of-contents)
+
+Use this only after completing the build milestones. Try answering each question before reading the reasoning.
+
+### Scenario
+
+A web application runs on one EC2 instance in one AZ. Traffic increases during a sale, users see intermittent failures, the database is slow, and an administrator recently changed a security group manually.
+
+1. **What is the first investigation path?**
+    - **Tests:** layered troubleshooting.
+    - **How to think:** DNS and entry point, load balancer, network controls, target/application, database, then recent changes.
+    - **Answer:** Establish the symptom and timestamp, inspect CloudWatch metrics/logs, check CloudTrail for the security-group change, and test the request path from the outside inward.
+    - **Common wrong answer:** immediately increase the EC2 instance size.
+
+2. **How would you remove the single-server failure?**
+    - **Tests:** HA design.
+    - **How to think:** redundancy plus health-based routing.
+    - **Answer:** Use a launch template, instances across at least two AZs, an ALB target group, health checks, and an ASG with sensible desired/min/max capacity.
+    - **Common wrong answer:** create a second instance but leave users connected directly to the first IP.
+
+3. **How would you address the slow database without confusing availability and scaling?**
+    - **Tests:** RDS architecture.
+    - **How to think:** separate failover from read capacity.
+    - **Answer:** Use Multi-AZ for database availability and investigate query, connection, storage, and CPU metrics. Add read replicas only when read scaling is the actual bottleneck.
+    - **Common wrong answer:** assume Multi-AZ automatically doubles read capacity.
+
+4. **How should the application access S3 and the database securely?**
+    - **Tests:** IAM and secret handling.
+    - **How to think:** workload identity, resource boundaries, and secret lifecycle.
+    - **Answer:** Attach an instance/service role with least privilege, keep the bucket private, use VPC endpoints where appropriate, and retrieve database credentials through Secrets Manager or an approved configuration mechanism.
+    - **Common wrong answer:** place one access key in user data for every instance.
+
+5. **How would you handle the manual security-group change?**
+    - **Tests:** audit and configuration drift.
+    - **How to think:** identify, contain, understand, and prevent recurrence.
+    - **Answer:** Use CloudTrail to identify the actor and change, assess exposure, restore the intended rule through reviewed IaC, and check for drift.
+    - **Common wrong answer:** delete the security group before preserving evidence or understanding dependencies.
+
+6. **Where do CloudFront and Route 53 fit?**
+    - **Tests:** edge versus DNS responsibilities.
+    - **How to think:** DNS selects an endpoint; CloudFront changes delivery and caching.
+    - **Answer:** Route 53 resolves the name to CloudFront or the ALB. CloudFront can cache content and use OAC for a private S3 origin; it does not replace ALB health checks or origin security.
+    - **Common wrong answer:** use CRR as the primary global latency solution for every read.
+
+7. **How would you define recovery requirements?**
+    - **Tests:** HA/DR and RPO/RTO.
+    - **How to think:** specify acceptable data loss and recovery time before selecting backup/replication.
+    - **Answer:** Define RPO and RTO per component, test restoration and dependencies, and decide whether Multi-AZ, cross-Region copies, or a warm recovery environment is justified.
+    - **Common wrong answer:** say “we have snapshots, so DR is complete.”
+
+8. **How would you make the architecture repeatable?**
+    - **Tests:** IaC and operational maturity.
+    - **How to think:** desired state, review, safe change, and rollback.
+    - **Answer:** Parameterize CloudFormation or Terraform, review plans/change sets, protect state and secrets, tag resources, detect drift, and deploy through a controlled pipeline.
+    - **Common wrong answer:** export a manually created resource and assume the generated template is automatically production-ready.
+
+9. **What would you monitor after the redesign?**
+    - **Tests:** observability.
+    - **How to think:** user symptoms, system saturation, dependency health, and change evidence.
+    - **Answer:** Track ALB latency/errors/target health, EC2 CPU/memory/disk, ASG capacity, RDS connections/storage/latency, application logs, CloudWatch alarms, CloudTrail changes, and relevant EventBridge actions.
+    - **Common wrong answer:** monitor only EC2 CPU.
+
+10. **How would you prove the design works?**
+     - **Tests:** operational verification.
+     - **How to think:** test the failure modes deliberately and safely.
+     - **Answer:** Stop an application, remove a disposable rule, terminate one managed instance, test database reachability, inspect logs and alarms, restore the controls, and record the observed recovery time.
+     - **Common wrong answer:** consider the design highly available because two instances were created once.
 
 ## Production Checklist
 [Main menu](#table-of-contents)
