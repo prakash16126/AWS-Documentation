@@ -1,4 +1,4 @@
-# Prakash's Practical AWS + DevOps Knowledge Base
+# Practical AWS & DevOps Field Guide
 
 A personal AWS learning and engineering knowledge base for beginner and intermediate DevOps learners. It combines simple explanations, classroom analogies, practical commands, architecture reasoning, troubleshooting, labs, and interview preparation.
 
@@ -30,6 +30,7 @@ A personal AWS learning and engineering knowledge base for beginner and intermed
 - [Console Usage and Durable Verification](#console-usage-and-durable-verification)
 
 ## How to Use These Notes
+[Main menu](#table-of-contents)
 
 Read the fundamentals first, then follow the service relationships rather than treating each AWS service as an isolated product. For every design ask:
 
@@ -52,6 +53,7 @@ Never commit real credentials, private keys, tokens, database passwords, account
 Verify pricing, free-tier allowances, quotas, service limits, supported Regions, instance types, runtime versions, CLI options, and console behavior against current AWS documentation before using an example in production. This knowledge base intentionally avoids temporary prices and quotas.
 
 ## Prerequisites and Setup
+[Main menu](#table-of-contents)
 
 Complete the general setup once, then use the lab-specific prerequisites before each exercise. Verify current installation commands, supported operating systems, service limits, pricing, and Regions against current vendor documentation because they change.
 
@@ -157,6 +159,7 @@ terraform version
 Common issues are a missing `PATH` entry, an outdated provider lock file, credentials pointing to the wrong profile, and running `terraform destroy` in the wrong directory.
 
 ## AWS Fundamentals
+[Main menu](#table-of-contents)
 
 ### What is AWS?
 
@@ -205,6 +208,7 @@ Authentication identifies the caller. Authorization decides what that caller can
 **Answer:** Make changes repeatable through Infrastructure as Code and pipelines, add validation and change review, define rollback, and monitor the deployment and application.
 
 ## Global Infrastructure
+[Main menu](#table-of-contents)
 
 ### Region, Availability Zone, and scope
 
@@ -230,6 +234,7 @@ Multi-AZ improves availability during an AZ failure. It does not automatically p
 **Answer:** Nothing automatically. The workload needs resources, data, identity, networking, DNS, and a tested recovery process in the second Region. Multi-AZ is the nearer-term control for an AZ failure.
 
 ## Compute: EC2, AMI, and EBS
+[Main menu](#table-of-contents)
 
 ### EC2
 
@@ -325,6 +330,7 @@ curl -I http://localhost
 **Answer:** Check the application locally, listener port, service logs, instance status, public address, subnet route, Internet Gateway path, security group, NACL, DNS, and load-balancer health in that order.
 
 ## Storage: S3 and EFS
+[Main menu](#table-of-contents)
 
 ### S3
 
@@ -420,6 +426,7 @@ Use encryption, POSIX permissions, access points where useful, and security grou
 **Answer:** Check the second instance's AZ mount target, DNS resolution, NFS TCP 2049 security-group rules, subnet routes, POSIX permissions, and mount configuration.
 
 ## Database: RDS
+[Main menu](#table-of-contents)
 
 Amazon RDS is a managed relational database service. AWS manages much of provisioning, patching, backups, monitoring, and failure handling while the team chooses the engine, instance class, storage, schema, access model, and maintenance window.
 
@@ -476,6 +483,7 @@ Verify DNS, the security-group path, TLS settings, authentication, and a test qu
 **Answer:** Use Multi-AZ for availability and failover, and consider read replicas for read scaling. They solve different problems.
 
 ## Networking as One System
+[Main menu](#table-of-contents)
 
 ### Mental model
 
@@ -556,6 +564,7 @@ Check subnet association, route target/state, security-group ingress and egress,
 **Answer:** Check the private subnet route to a NAT Gateway or required VPC endpoint, the NAT subnet route to an Internet Gateway, security-group egress, NACL return rules, DNS, and destination policies.
 
 ## Route 53 and DNS
+[Main menu](#table-of-contents)
 
 Amazon Route 53 is a managed DNS and traffic-management service.
 
@@ -600,6 +609,7 @@ Use least-privilege Route 53 permissions, protect domain-registration access wit
 **Answer:** Recursive resolvers and clients may still have the old record cached until its TTL expires. Verify authoritative answers, TTL, health-check state, and the backup application's readiness.
 
 ## Load Balancing and Auto Scaling
+[Main menu](#table-of-contents)
 
 ```mermaid
 flowchart TD
@@ -664,6 +674,7 @@ Terminate one managed instance and verify the ASG replaces it while the ALB cont
 **Answer:** Test the health-check path locally on a target, confirm the process listens on the target port, inspect application logs, then check target and load-balancer security groups, NACLs, routes, and the health-check response code.
 
 ## CDN, Lambda, WAF, and Shield
+[Main menu](#table-of-contents)
 
 ### CloudFront
 
@@ -726,6 +737,7 @@ Start new WAF rules in `COUNT` where safe, inspect sampled requests and logs, th
 **Answer:** Review sampled requests and metrics, switch the rule to `COUNT` or narrow its scope, test an exception, and only then return to `BLOCK`.
 
 ## Identity and Security
+[Main menu](#table-of-contents)
 
 ### IAM model
 
@@ -794,6 +806,7 @@ When access is denied, check identity policy, resource policy, trust policy, SCP
 Do not reduce the decision to “passwords versus everything else.” Consider rotation, integrations, access patterns, lifecycle, compliance, and cost. Never put secret values directly in this README, templates, user data, or source control.
 
 ## Monitoring and Audit
+[Main menu](#table-of-contents)
 
 ### CloudWatch
 
@@ -851,6 +864,7 @@ Verify principal, timestamp, Region, resource, and outcome. Delivery can be dela
 **Answer:** Use CloudTrail to identify the API call, principal, source IP, Region, timestamp, and result. Then contain the identity and preserve evidence.
 
 ## High Availability, Backup, and DR
+[Main menu](#table-of-contents)
 
 **High Availability** keeps a workload serving during expected component or AZ failures. **Disaster Recovery** restores it after a larger event such as regional disruption, corruption, or account compromise.
 
@@ -894,6 +908,7 @@ Backup is not instant HA. Test restore time and application consistency against 
 **Answer:** Not necessarily. Test restore duration, quotas, networking, DNS, IAM, KMS, secrets, application artifacts, data consistency, and the recovery runbook.
 
 ## Infrastructure as Code
+[Main menu](#table-of-contents)
 
 CloudFormation describes AWS resources as code, then creates and updates a stack.
 
@@ -1032,6 +1047,7 @@ output "selected_region" {
 Use CloudFormation when AWS-native infrastructure, deep AWS integration, or CloudFormation-specific capabilities are the priority. Consider Terraform for multi-provider or multi-cloud environments, teams standardized on Terraform, or a broader provider ecosystem. In either tool, review plans, protect state, avoid plaintext secrets, and use separate environments and state boundaries.
 
 ## Practical Labs
+[Main menu](#table-of-contents)
 
 ### Lab checklist
 
@@ -1064,6 +1080,7 @@ Before starting a lab, complete the relevant setup in [Prerequisites and Setup](
 Delete or review EC2 instances, EBS volumes, Elastic IPs, NAT gateways, load balancers, target groups, RDS instances, test S3 buckets and versions, EFS file systems, CloudWatch alarms, CloudTrail trails, WAF distributions, and CloudFormation stacks. Some resources continue billing after the primary resource is deleted.
 
 ## CLI and Command Reference
+[Main menu](#table-of-contents)
 
 ### AWS CLI setup
 
@@ -1138,6 +1155,7 @@ vim <FILE>
 In `vim`, press `i` to insert, `Esc` then `:wq` to save and exit. Treat `rm` as destructive and avoid broad commands such as `rm *` outside a disposable directory. Use `systemctl enable` for boot startup; do not confuse it with stopping a service.
 
 ## Linux and AWS Troubleshooting
+[Main menu](#table-of-contents)
 
 ### Slow application playbook
 
@@ -1204,6 +1222,7 @@ To change Nginx from port 80 to 8080, update the correct `listen` directive, val
 For AWS failures, check identity and Region first, then resource state, DNS and network path, IAM/resource/KMS policies, application and OS logs, CloudWatch, CloudTrail, recent changes, and quotas.
 
 ## Architecture Decision Tables
+[Main menu](#table-of-contents)
 
 | Decision | Choose this when | Main caution |
 |---|---|---|
@@ -1223,6 +1242,7 @@ For AWS failures, check identity and Region first, then resource state, DNS and 
 | CloudFront OAC vs public S3 access | Private origin access vs disposable public website demo | OAC is preferred for new production patterns |
 
 ## Interview and Scenario Questions
+[Main menu](#table-of-contents)
 
 ### EC2 and storage
 
@@ -1343,6 +1363,7 @@ For AWS failures, check identity and Region first, then resource state, DNS and 
 **Answer:** Check the service locally, listener port, OS logs, instance state, public/private addressing, subnet route, IGW/NAT path, security group, NACL, DNS, and load-balancer health checks in that order.
 
 ## Production Checklist
+[Main menu](#table-of-contents)
 
 - [ ] Use IAM Identity Center, federation, roles, and temporary credentials where possible.
 - [ ] Enable MFA and protect the root user; do not use root for routine work.
@@ -1358,10 +1379,12 @@ For AWS failures, check identity and Region first, then resource state, DNS and 
 - [ ] Keep console instructions as orientation only; prefer CLI, API, and IaC as the source of truth.
 
 ## Console Usage and Durable Verification
+[Main menu](#table-of-contents)
 
 Console labels and locations may change. Use the Console to understand a service or inspect a resource, but prefer CLI, API, and IaC for repeatable work. For each console-oriented action, identify the conceptual choices first, use the equivalent CLI/API/IaC where practical, and verify the resulting resource state, network path, identity, logs, metrics, and costs.
 
 ## Source Notes and Corrections
+[Main menu](#table-of-contents)
 
 The original classroom source is preserved as [AWS Notes.txt](AWS%20Notes.txt). It contains useful practical material, but also stale IDs, endpoints, public IPs, sample passwords, and console-dependent instructions. Those values were not copied into this README.
 
